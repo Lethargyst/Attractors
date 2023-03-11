@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
         return -1;
     }
     
-    Scene& scene = Scene::initialize(&window, 1000000);
+    Scene& scene = Scene::initialize(&window, 2000000, 2);
         
     const float fps = 60.0f;
     const float max_peroid = 1 / fps;

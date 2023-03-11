@@ -1,16 +1,18 @@
 
 #include "Scene.hpp"
 
-Scene& Scene::initialize(Window* window, GLuint partsAmount) 
+Scene& Scene::initialize(Window* window, GLuint _particlesAmount, GLuint _attractorsAmount) 
 {
-    static Scene sceneObj(window, partsAmount);
+    static Scene sceneObj(window, _particlesAmount, _attractorsAmount);
+    sceneObj.initAttractors();
     sceneObj.prepareShaderPrograms();
-    sceneObj.initBuffers(partsAmount);
+    sceneObj.initBuffers();
     
+
     glClearColor(0.9f, 0.9f, 0.98f, 1.0f);
 
     glm::vec2 res = window->getResolution();
-    sceneObj._projection = glm::perspective(glm::radians(50.0f), (float)res.x / res.y, 1.0f, 100.0f);
+    sceneObj._projection = glm::perspective(glm::radians(70.0f), (float)res.x / res.y, 1.0f, 100.0f);
     
     glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
     glEnable(GL_BLEND);
@@ -42,69 +44,82 @@ void Scene::prepareShaderPrograms()
     #endif
 }
 
-void Scene::initBuffers(GLuint particlesAmount)
+void Scene::initBuffers()
 {
-    std::vector<GLfloat> positions(particlesAmount * 4);
-    std::vector<GLfloat> velocities(particlesAmount * 4, 0.0f);
+    std::vector<GLfloat> positions(_particlesAmount * 4);
+    std::vector<GLfloat> velocities(_particlesAmount * 4, 0.0f);
 
     for (std::size_t i = 0; i < positions.size(); ++i)
-        positions[i] = (Random::getNormalizedFloat() * 2 - 1.0f) * 3;
+        positions[i] = (Random::getNormalizedFloat() * 2 - 1.0f);
 
-    GLuint bufs[2];
-    glGenBuffers(2, bufs);   
-    GLuint posBuf = bufs[0];
-    GLuint velBuf = bufs[1];
+    GLuint bufs[4];
+    glGenBuffers(4, bufs);   
+    GLuint particlesPosBuf = bufs[0];
+    GLuint particlesVelBuf = bufs[1];
+    GLuint attractorsPosBuf = bufs[2];
+    GLuint attractorsGravBuf = bufs[3];
 
-    GLuint bufSize = particlesAmount * 4 * sizeof(GLfloat);
- 
+    _attractorsPosBuf = attractorsPosBuf;
+    
     // prepare compute shader buffers
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, posBuf);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, bufSize, &positions[0], GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particlesPosBuf);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _particlesAmount * 4 * sizeof(GLfloat), &positions[0], GL_DYNAMIC_COPY);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, velBuf);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, bufSize, &velocities[0], GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, particlesVelBuf);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _particlesAmount * 4 * sizeof(GLfloat), &velocities[0], GL_DYNAMIC_DRAW);
 
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, attractorsPosBuf);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _attractorsAmount * 4 * sizeof(GLfloat), &_attractorsPos[0], GL_DYNAMIC_DRAW);
+    
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, attractorsGravBuf);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, _attractorsAmount * sizeof(GLfloat), &_attractorsGravity[0], GL_DYNAMIC_DRAW);
+    
     //prepare particles VAO
     glGenVertexArrays(1, &_particlesVAO);
     glBindVertexArray(_particlesVAO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, posBuf);
+    glBindBuffer(GL_ARRAY_BUFFER, particlesPosBuf);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
     glBindVertexArray(0);
     
-    //prepare attractors buffers
-    glGenBuffers(1, &_attrVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, _attrVBO);
-    
-    GLfloat attrdata[] = {_attr1.x, _attr1.y, _attr1.z, _attr1.w, 
-                          _attr2.x, _attr2.y, _attr2.z, _attr2.w};
+    //prepare attractors VAO
+    glGenVertexArrays(1, &_attractorsVAO);
+    glBindVertexArray(_attractorsVAO);
 
-    glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(GLfloat), attrdata, GL_DYNAMIC_DRAW);
-    
-    glGenVertexArrays(1, &_attrVAO);
-    glBindVertexArray(_attrVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, _attrVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, attractorsPosBuf);
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
 
     glBindVertexArray(0);
+
+    _computeProgram.use();
+    _computeProgram.setUniform("AttractorsAmount", _attractorsAmount);
+}
+
+void Scene::initAttractors()
+{
+    _attractorsPos.resize(_attractorsAmount * 4);
+    for (std::size_t i = 0; i < _attractorsAmount * 4; i += 4) {
+        _attractorsPos[i] = (Random::getNormalizedFloat() * 2.0f - 1) * 10;
+        _attractorsPos[i + 1] = (Random::getNormalizedFloat() * 2.0f - 1) * 10;
+        _attractorsPos[i + 2] = 0.0f;
+        _attractorsPos[i + 3] = 1.0f;
+    }
+
+    _attractorsGravity.resize(_attractorsAmount);
+    for (std::size_t i = 0; i < _attractorsAmount; ++i) 
+        _attractorsGravity[i] = 1000;
 }
 
 void Scene::render()
 {
-    glm::mat4 rot = glm::rotate(glm::mat4(1.0f), glm::radians(_angle), glm::vec3(0,0,1));
-    glm::vec3 att1 = glm::vec3(rot * _attr1);
-    glm::vec3 att2 = glm::vec3(rot * _attr1);
     
     // Execute the compute shader
     _computeProgram.use();
-    _computeProgram.setUniform("BlackHolePos1", _attr1);
-    _computeProgram.setUniform("BlackHolePos2", _attr2);
     glDispatchCompute(_particlesAmount / 1000, 1, 1);
-    glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     // Draw the scene
     _renderProgram.use();
@@ -113,7 +128,7 @@ void Scene::render()
     _model = glm::mat4(1.0f);
     
     glm::mat4 mv = _view * _model;
-    glm::mat3 norm = glm::mat3( glm::vec3(mv[0]), glm::vec3(mv[1]), glm::vec3(mv[2]) );
+    glm::mat3 norm = glm::mat3(glm::vec3(mv[0]), glm::vec3(mv[1]), glm::vec3(mv[2]));
 
     _renderProgram.setUniform("ModelViewMatrix", mv);
     _renderProgram.setUniform("NormalMatrix", norm);
@@ -127,14 +142,12 @@ void Scene::render()
 
     // Draw the attractors
     glPointSize(5.0f);
-    glBindBuffer(GL_ARRAY_BUFFER, _attrVBO);
-    GLfloat attrData[] = {_attr1.x, _attr1.y, _attr1.z, 1.0f, 
-                          _attr2.x, _attr2.y, _attr2.z, 1.0f};
-    glBufferSubData(GL_ARRAY_BUFFER, 0, 8 * sizeof(GLfloat), attrData);
+    glBindBuffer(GL_ARRAY_BUFFER, _attractorsPosBuf);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, _attractorsPos.size() * sizeof(GLfloat), &_attractorsPos[0]);
     
     _renderProgram.setUniform("Color", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-    glBindVertexArray(_attrVAO);
-    glDrawArrays(GL_POINTS, 0, 2);
+    glBindVertexArray(_attractorsVAO);
+    glDrawArrays(GL_POINTS, 0, _attractorsAmount);
 
     glfwSwapBuffers(_window->glWindow_);
     glfwPollEvents();
