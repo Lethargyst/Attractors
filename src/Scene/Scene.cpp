@@ -22,7 +22,7 @@ Scene& Scene::initialize(Window* window, GLuint _particlesAmount, GLuint _attrac
 }
 
 void Scene::prepareShaderPrograms()
-{
+{       
     try
     {
         _renderProgram.compileShader("../src/Shaders/particles.vert");
@@ -151,4 +151,24 @@ void Scene::render()
 
     glfwSwapBuffers(_window->glWindow_);
     glfwPollEvents();
+}
+
+void Scene::update(double deltaTime)
+{
+    processInput();
+    showFPS(deltaTime);
+    
+}
+void Scene::showFPS(double deltaTime) const
+{   
+    double fps = 1 / deltaTime;
+    std::stringstream ss;
+    ss << "Swarm " << "[" << fps << " FPS]";
+    glfwSetWindowTitle(_window->glWindow_, ss.str().c_str());
+}
+
+void Scene::processInput()
+{
+    if (glfwGetKey(_window->glWindow_, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(_window->glWindow_, true); 
 }

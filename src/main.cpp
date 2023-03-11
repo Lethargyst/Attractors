@@ -4,13 +4,6 @@
 #include "Renderer/Window.hpp"
 #include "Scene/Scene.hpp"
 
-void showFPS(Window& window, double deltaTime)
-{
-    double fps = 1 / deltaTime;
-    std::stringstream ss;
-    ss << "Swarm " << "[" << fps << " FPS]";
-    glfwSetWindowTitle(window.glWindow_, ss.str().c_str());
-}
 
 int main(int argc, char* argv[])
 {
@@ -42,9 +35,8 @@ int main(int argc, char* argv[])
 
         if (deltaTime >= max_peroid) {
             lastTime = time;
-            // scene.update();
+            scene.update(deltaTime);
             scene.render();
-            showFPS(window, deltaTime);
         }
     }
 

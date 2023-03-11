@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <sstream>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -16,7 +17,7 @@ class Scene
 public:
     static Scene& initialize(Window* window, GLuint particlesAmount, GLuint attractorsAmount);
     
-    // void update();
+    void update(double deltaTime);
     void render();
     
 private:    
@@ -30,9 +31,11 @@ private:
     
 //----------------------------------------------------------------------------
     void initBuffers();
-    void prepareShaderPrograms();
- 
     void initAttractors();
+    void prepareShaderPrograms();
+
+    void showFPS(double deltaTime) const;
+    void processInput();
 //----------------------------------------------------------------------------
     std::vector<GLfloat> _attractorsPos;
     std::vector<GLfloat> _attractorsGravity;
