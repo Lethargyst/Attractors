@@ -4,7 +4,7 @@ layout( local_size_x = 1000 ) in;
 
 uniform uint AttractorsAmount = 2;
     
-uniform float ParticleMass = 0.1;
+uniform float ParticleMass = 1.0;
 uniform float ParticleInvMass = 1.0 / 0.1;
 uniform float DeltaT = 0.0005;
 uniform float MaxDist = 90.0;
@@ -34,7 +34,7 @@ void main() {
     for (int i = 0; i < AttractorsAmount; ++i) {
         vec3 d = AttractorsPos[i] - p;
         float dist = length(d);
-        force += (AttractorsGravity[i] / dist) * normalize(d);
+        force += (AttractorsGravity[i] / (dist * dist)) * d;
     }
 
     vec3 a = force * ParticleInvMass;

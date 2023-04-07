@@ -7,8 +7,11 @@ Scene& Scene::initialize(Window* window, GLuint _particlesAmount, GLuint _attrac
     sceneObj.initAttractors();
     sceneObj.prepareShaderPrograms();
     sceneObj.initBuffers();
+    sceneObj.initCamera(glm::vec3(0.0f, 0.0f, 10.0f), 
+                        glm::vec3(0.0f, 0.0f, 0.1f),
+                        glm::vec3(0.0f, 1.0f, 0.0f),
+                        0.5f);
     
-
     glClearColor(0.9f, 0.9f, 0.98f, 1.0f);
 
     glm::vec2 res = window->getResolution();
@@ -49,8 +52,12 @@ void Scene::initBuffers()
     std::vector<GLfloat> positions(_particlesAmount * 4);
     std::vector<GLfloat> velocities(_particlesAmount * 4, 0.0f);
 
+
     for (std::size_t i = 0; i < positions.size(); ++i)
-        positions[i] = (Random::getNormalizedFloat() * 2 - 1.0f);
+        velocities[i] = (Random::getNormalizedFloat() * 2 - 1.0f) * 10.0f;
+
+    /* for (std::size_t i = 0; i < positions.size();++i)
+        positions[i] = (Random::getNormalizedFloat() * 2 - 1.0f); */
 
     GLuint bufs[4];
     glGenBuffers(4, bufs);   
@@ -113,6 +120,11 @@ void Scene::initAttractors()
         _attractorsGravity[i] = 1000;
 }
 
+void Scene::initCamera(glm::vec3 pos, glm::vec3 front, glm::vec3 up, float speed)
+{
+    _camera.initialize(pos, front, up, speed);
+}
+
 void Scene::render()
 {
     
@@ -124,16 +136,7 @@ void Scene::render()
     // Draw the scene
     _renderProgram.use();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    _view = glm::lookAt(glm::vec3(2,0,20), glm::vec3(0,0,0), glm::vec3(0,1,0));
-    _model = glm::mat4(1.0f);
-    
-    glm::mat4 mv = _view * _model;
-    glm::mat3 norm = glm::mat3(glm::vec3(mv[0]), glm::vec3(mv[1]), glm::vec3(mv[2]));
-
-    _renderProgram.setUniform("ModelViewMatrix", mv);
-    _renderProgram.setUniform("NormalMatrix", norm);
-    _renderProgram.setUniform("MVP", _projection * mv);
-    
+       
     // Draw the particles
     glPointSize(1.0f);
     _renderProgram.setUniform("Color", glm::vec4(0.0f, 0.0f, 0.0f, 0.2f));
@@ -156,9 +159,20 @@ void Scene::render()
 void Scene::update(double deltaTime)
 {
     processInput();
+
+    _view = glm::lookAt(_camera.getPosition(), _camera.getFrontVec(), _camera.getUpVec());
+    _model = glm::mat4(1.0f);
+    glm::mat4 mv = _view * _model;
+    glm::mat3 norm = glm::mat3(glm::vec3(mv[0]), glm::vec3(mv[1]), glm::vec3(mv[2]));
+
+    _renderProgram.setUniform("ModelViewMatrix", mv);
+    _renderProgram.setUniform("NormalMatrix", norm);
+    _renderProgram.setUniform("MVP", _projection * mv);
+
     showFPS(deltaTime);
     
 }
+
 void Scene::showFPS(double deltaTime) const
 {   
     double fps = 1 / deltaTime;
@@ -171,4 +185,5 @@ void Scene::processInput()
 {
     if (glfwGetKey(_window->glWindow_, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(_window->glWindow_, true); 
+    _camera.processInput(_window);
 }

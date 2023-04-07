@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Camera/Camera.hpp"
 #include "Renderer/ShaderProgram.hpp"
 #include "Renderer/Window.hpp"
 #include "Utils/Random.hpp"
@@ -32,6 +33,7 @@ private:
 //----------------------------------------------------------------------------
     void initBuffers();
     void initAttractors();
+    void initCamera(glm::vec3 pos, glm::vec3 front, glm::vec3 up, float speed);
     void prepareShaderPrograms();
 
     void showFPS(double deltaTime) const;
@@ -39,6 +41,8 @@ private:
 //----------------------------------------------------------------------------
     std::vector<GLfloat> _attractorsPos;
     std::vector<GLfloat> _attractorsGravity;
+
+    Camera _camera;
 
     glm::mat4 _projection, _model, _view;
     
