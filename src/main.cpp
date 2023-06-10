@@ -11,8 +11,8 @@ int main(int argc, char* argv[])
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    
-    #ifdef __APPLE__
+
+   #ifdef __APPLE__
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     #endif
     Window window(1100, 900, "Particles");
@@ -22,9 +22,9 @@ int main(int argc, char* argv[])
         std::cerr << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-    
+ 
     Scene& scene = Scene::initialize(&window, 1000000, 2);
-        
+ 
     const float fps = 60.0f;
     const float max_peroid = 1 / fps;
     float lastTime = 0.0f;
